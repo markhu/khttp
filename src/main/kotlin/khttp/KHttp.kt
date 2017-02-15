@@ -5,7 +5,7 @@
  */
 @file:JvmName("KHttp")
 
-package khttp
+package com.khttp
 
 import khttp.requests.GenericRequest
 import khttp.responses.GenericResponse
