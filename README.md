@@ -9,7 +9,7 @@
 khttp is a simple library for HTTP requests in Kotlin. It functions similarly to Python's `requests` module.
 
 ```kotlin
-import khttp.get
+import com.khttp.get
 
 fun main(args: Array<out String>) {
     // Get our IP
