@@ -13,6 +13,7 @@ import org.jetbrains.spek.api.dsl.on
 import org.json.JSONObject
 import java.net.MalformedURLException
 import java.net.SocketTimeoutException
+import java.net.URLEncoder
 import java.util.zip.GZIPInputStream
 import java.util.zip.InflaterInputStream
 import kotlin.test.assertEquals
@@ -95,7 +96,7 @@ class KHttpGetSpec : Spek({
         }
     }
     given("a get request that redirects and allowing redirects") {
-        val response = get("http://httpbin.org/redirect-to?url=http://httpbin.org/get")
+        val response = get("http://httpbin.org/redirect-to?url=${URLEncoder.encode("http://httpbin.org/get", "utf-8")}")
         on("accessing the json") {
             val json = response.jsonObject
             it("should have the redirected url") {
@@ -104,7 +105,7 @@ class KHttpGetSpec : Spek({
         }
     }
     given("a get request that redirects and disallowing redirects") {
-        val response = get("http://httpbin.org/redirect-to?url=http://httpbin.org/get", allowRedirects = false)
+        val response = get("http://httpbin.org/redirect-to?url=${URLEncoder.encode("http://httpbin.org/get", "utf-8")}", allowRedirects = false)
         on("accessing the status code") {
             val code = response.statusCode
             it("should be 302") {
@@ -401,16 +402,6 @@ class KHttpGetSpec : Spek({
             val contentWithoutBytes = get(url).content.toList().filter { it != '\r'.toByte() && it != '\n'.toByte() }
             it("should be the same as the content without line breaks") {
                 assertEquals(contentWithoutBytes, bytes)
-            }
-        }
-    }
-    given("a request with a space in the url") {
-        val url = "https://httpbin.org/anything/some text"
-        val response = get(url)
-        on("check the url") {
-            val responseUrl = response.jsonObject["url"]
-            it("should be the same as the request url") {
-                assertEquals(url, responseUrl)
             }
         }
     }

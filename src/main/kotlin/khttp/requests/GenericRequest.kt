@@ -5,7 +5,7 @@
  */
 package khttp.requests
 
-import khttp.extensions.putAllIfAbsentWithNull
+import khttp.extensions.putAllIfAbsent
 import khttp.extensions.writeAndFlush
 import khttp.structures.authorization.Authorization
 import khttp.structures.files.FileLike
@@ -21,14 +21,13 @@ import java.io.StringWriter
 import java.net.IDN
 import java.net.URI
 import java.net.URL
-import java.net.URLDecoder
 import java.util.UUID
 
 class GenericRequest internal constructor(
     override val method: String,
     url: String,
     override val params: Map<String, String>,
-    headers: Map<String, String?>,
+    headers: Map<String, String>,
     data: Any?,
     override val json: Any?,
     override val auth: Authorization?,
@@ -99,7 +98,6 @@ class GenericRequest internal constructor(
                     val boundary = this.headers["Content-Type"]!!.split("boundary=")[1]
                     // Make a writer for convenience
                     val writer = bytes.writer()
-                    // FIXME: Check if using base64 and only add header to data if so
                     // Add the form data
                     if (data != null) {
                         for ((key, value) in data as Map<*, *>) {
@@ -113,7 +111,7 @@ class GenericRequest internal constructor(
                     // Add the files
                     files.forEach {
                         writer.writeAndFlush("--$boundary\r\n")
-                        writer.writeAndFlush("Content-Disposition: form-data; name=\"${it.fieldName}\"; filename=\"${it.fileName}\"\r\n\r\n")
+                        writer.writeAndFlush("Content-Disposition: form-data; name=\"${it.name}\"; filename=\"${it.name}\"\r\n\r\n")
                         bytes.write(it.contents)
                         writer.writeAndFlush("\r\n")
                     }
@@ -139,29 +137,26 @@ class GenericRequest internal constructor(
             this.data = data
             if (data != null && this.files.isEmpty()) {
                 if (data is Map<*, *>) {
-                    mutableHeaders.putAllIfAbsentWithNull(GenericRequest.DEFAULT_FORM_HEADERS)
+                    mutableHeaders.putAllIfAbsent(GenericRequest.DEFAULT_FORM_HEADERS)
                 } else {
-                    mutableHeaders.putAllIfAbsentWithNull(GenericRequest.DEFAULT_DATA_HEADERS)
+                    mutableHeaders.putAllIfAbsent(GenericRequest.DEFAULT_DATA_HEADERS)
                 }
             }
         } else {
             this.data = this.coerceToJSON(json)
-            mutableHeaders.putAllIfAbsentWithNull(GenericRequest.DEFAULT_JSON_HEADERS)
+            mutableHeaders.putAllIfAbsent(GenericRequest.DEFAULT_JSON_HEADERS)
         }
-        mutableHeaders.putAllIfAbsentWithNull(GenericRequest.DEFAULT_HEADERS)
+        mutableHeaders.putAllIfAbsent(GenericRequest.DEFAULT_HEADERS)
         if (this.files.isNotEmpty()) {
-            mutableHeaders.putAllIfAbsentWithNull(GenericRequest.DEFAULT_UPLOAD_HEADERS)
-            if ("Content-Type" in mutableHeaders) {
-                mutableHeaders["Content-Type"] = mutableHeaders["Content-Type"]?.format(UUID.randomUUID().toString().replace("-", ""))
-            }
+            mutableHeaders.putAllIfAbsent(GenericRequest.DEFAULT_UPLOAD_HEADERS)
+            mutableHeaders["Content-Type"] = mutableHeaders["Content-Type"]!!.format(UUID.randomUUID().toString().replace("-", ""))
         }
         val auth = this.auth
         if (auth != null) {
             val header = auth.header
             mutableHeaders[header.first] = header.second
         }
-        val nonNullHeaders: MutableMap<String, String> = mutableHeaders.filterValues { it != null }.mapValues { it.value!! }.toSortedMap()
-        this.headers = CaseInsensitiveMutableMap(nonNullHeaders)
+        this.headers = mutableHeaders
     }
 
     private fun coerceToJSON(any: Any): String {
@@ -172,7 +167,7 @@ class GenericRequest internal constructor(
         } else if (any is Collection<*>) {
             return JSONArray(any).toString()
         } else if (any is Iterable<*>) {
-            return any.withJSONWriter { jsonWriter, _ ->
+            return any.withJSONWriter { jsonWriter, iterable ->
                 jsonWriter.array()
                 for (thing in any) {
                     jsonWriter.value(thing)
@@ -197,12 +192,7 @@ class GenericRequest internal constructor(
         val newHost = IDN.toASCII(this.host)
         this.javaClass.getDeclaredField("host").apply { this.isAccessible = true }.set(this, newHost)
         this.javaClass.getDeclaredField("authority").apply { this.isAccessible = true }.set(this, if (this.port == -1) this.host else "${this.host}:${this.port}")
-        val query = if (this.query == null) {
-            null
-        } else {
-            URLDecoder.decode(this.query, "UTF-8")
-        }
-        return URL(URI(this.protocol, this.userInfo, this.host, this.port, this.path, query, this.ref).toASCIIString())
+        return URL(this.toURI().toASCIIString())
     }
 
     private fun makeRoute(route: String) = URL(route + if (this.params.isNotEmpty()) "?${Parameters(this.params)}" else "").toIDN().toString()
