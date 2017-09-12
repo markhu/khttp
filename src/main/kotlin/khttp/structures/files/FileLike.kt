@@ -8,7 +8,7 @@ package khttp.structures.files
 import java.io.File
 import java.nio.file.Path
 
-class FileLike(val fieldName: String, val fileName: String, val contents: ByteArray) {
+class FileLike(val name: String, val contents: ByteArray) {
 
     constructor(name: String, contents: String) : this(name, contents.toByteArray())
 
@@ -20,5 +20,4 @@ class FileLike(val fieldName: String, val fileName: String, val contents: ByteAr
 
     constructor(path: Path) : this(path.toFile())
 
-    constructor(name: String, contents: ByteArray) : this(name, name, contents)
 }
