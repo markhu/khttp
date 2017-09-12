@@ -5,7 +5,7 @@
  */
 package khttp.requests
 
-import khttp.extensions.putAllIfAbsentWithNull
+import khttp.extensions.putAllIfAbsent
 import khttp.extensions.writeAndFlush
 import khttp.structures.authorization.Authorization
 import khttp.structures.files.FileLike
@@ -27,7 +27,7 @@ class GenericRequest internal constructor(
     override val method: String,
     url: String,
     override val params: Map<String, String>,
-    headers: Map<String, String?>,
+    headers: Map<String, String>,
     data: Any?,
     override val json: Any?,
     override val auth: Authorization?,
@@ -137,29 +137,26 @@ class GenericRequest internal constructor(
             this.data = data
             if (data != null && this.files.isEmpty()) {
                 if (data is Map<*, *>) {
-                    mutableHeaders.putAllIfAbsentWithNull(GenericRequest.DEFAULT_FORM_HEADERS)
+                    mutableHeaders.putAllIfAbsent(GenericRequest.DEFAULT_FORM_HEADERS)
                 } else {
-                    mutableHeaders.putAllIfAbsentWithNull(GenericRequest.DEFAULT_DATA_HEADERS)
+                    mutableHeaders.putAllIfAbsent(GenericRequest.DEFAULT_DATA_HEADERS)
                 }
             }
         } else {
             this.data = this.coerceToJSON(json)
-            mutableHeaders.putAllIfAbsentWithNull(GenericRequest.DEFAULT_JSON_HEADERS)
+            mutableHeaders.putAllIfAbsent(GenericRequest.DEFAULT_JSON_HEADERS)
         }
-        mutableHeaders.putAllIfAbsentWithNull(GenericRequest.DEFAULT_HEADERS)
+        mutableHeaders.putAllIfAbsent(GenericRequest.DEFAULT_HEADERS)
         if (this.files.isNotEmpty()) {
-            mutableHeaders.putAllIfAbsentWithNull(GenericRequest.DEFAULT_UPLOAD_HEADERS)
-            if ("Content-Type" in mutableHeaders) {
-                mutableHeaders["Content-Type"] = mutableHeaders["Content-Type"]?.format(UUID.randomUUID().toString().replace("-", ""))
-            }
+            mutableHeaders.putAllIfAbsent(GenericRequest.DEFAULT_UPLOAD_HEADERS)
+            mutableHeaders["Content-Type"] = mutableHeaders["Content-Type"]!!.format(UUID.randomUUID().toString().replace("-", ""))
         }
         val auth = this.auth
         if (auth != null) {
             val header = auth.header
             mutableHeaders[header.first] = header.second
         }
-        val nonNullHeaders: MutableMap<String, String> = mutableHeaders.filterValues { it != null }.mapValues { it.value!! }.toSortedMap()
-        this.headers = CaseInsensitiveMutableMap(nonNullHeaders)
+        this.headers = mutableHeaders
     }
 
     private fun coerceToJSON(any: Any): String {
