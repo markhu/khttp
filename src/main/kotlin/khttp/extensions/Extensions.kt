@@ -39,7 +39,7 @@ internal fun Writer.writeAndFlush(string: String) {
 }
 
 fun ByteArray.splitLines(): List<ByteArray> {
-    if (this.size == 0) return listOf()
+    if (this.isEmpty()) return listOf()
     val lines = arrayListOf<ByteArray>()
     var lastSplit = 0
     var skip = 0
@@ -93,14 +93,14 @@ internal fun <T> Class<T>.getSuperclasses(): List<Class<in T>> {
     return list
 }
 
-fun <K, V> MutableMap<K, V>.putIfAbsent(key: K, value: V) {
+fun <K, V> MutableMap<K, V>.putIfAbsentWithNull(key: K, value: V) {
     if (key !in this) {
         this[key] = value
     }
 }
 
-fun <K, V> MutableMap<K, V>.putAllIfAbsent(other: Map<K, V>) {
+fun <K, V> MutableMap<K, V>.putAllIfAbsentWithNull(other: Map<K, V>) {
     for ((key, value) in other) {
-        this.putIfAbsent(key, value)
+        this.putIfAbsentWithNull(key, value)
     }
 }
